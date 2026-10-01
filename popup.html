@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>E-Mail Manager</title>
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header>
+  <img src="icons/icon32.png" alt="" width="24" height="24">
+  <b>E-Mail Manager</b>
+  <span class="grow"></span>
+  <button class="link" id="settingsBtn">Settings</button>
+</header>
+
+<div id="welcome" class="pad hidden">
+  <h2>Welcome</h2>
+  <p>E-Mail Manager answers e-mails for you using rules you set — with your own message, attachments and labels.</p>
+  <p id="welcomeInbox" class="muted"></p>
+  <button class="primary" id="setupBtn">Start setup</button>
+</div>
+
+<div id="dash" class="pad hidden">
+  <div id="tabNotice" class="notice hidden"></div>
+
+  <div class="inbox">
+    <label class="small muted" for="inboxSel">Inbox</label>
+    <select id="inboxSel"></select>
+  </div>
+
+  <div id="statusBox" class="statusbox"></div>
+
+  <div class="actions">
+    <button class="primary" id="runBtn">Run now</button>
+    <button id="previewBtn" title="Shows what would happen. Nothing is sent or changed.">Preview</button>
+    <button id="stopBtn" class="danger hidden">Stop</button>
+  </div>
+  <div class="small muted" id="schedLine"></div>
+
+  <h3>Last run</h3>
+  <div id="lastRun" class="small"></div>
+  <div class="row" id="reportBtns">
+    <button class="link" id="downloadBtn">Download report (.xlsx)</button>
+    <button class="link" id="emailBtn">E-mail report to inbox</button>
+  </div>
+  <ul id="items" class="items"></ul>
+</div>
+
+<script type="module" src="popup.js"></script>
+</body>
+</html>

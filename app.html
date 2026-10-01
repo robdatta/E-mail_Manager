@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E-Mail Manager — Setup</title>
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <img src="icons/icon48.png" alt="" width="32" height="32">
+  <div>
+    <h1>E-Mail Manager</h1>
+    <div class="muted small">Answer the questions below, then save. You can change anything later.</div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="steps" id="stepNav" aria-label="Setup steps"></nav>
+
+  <main>
+    <!-- 1. Inbox -->
+    <section class="step card" data-step="inbox" data-title="Inbox">
+      <h2>1. Which inbox should I work on?</h2>
+      <p class="muted">Enter the Gmail or Google Workspace address, then connect it. Google will ask you to approve access.</p>
+      <div class="row">
+        <label class="field grow"><span>E-mail address</span>
+          <input type="email" id="accountEmail" placeholder="you@gmail.com" autocomplete="email"></label>
+        <button id="connectBtn" class="primary" style="align-self:flex-end">Connect</button>
+      </div>
+      <div id="connectStatus" class="small"></div>
+
+      <h3 style="margin-top:20px">Which e-mails should be checked?</h3>
+      <div class="grid2">
+        <label class="field"><span>Folder / label</span>
+          <select id="scopeLabel"><option value="INBOX">Inbox</option></select>
+          <span class="small muted">Connect first to list your labels.</span></label>
+        <label class="field"><span>Only e-mails received on or after (optional)</span>
+          <input type="date" id="scopeAfter"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="scopeUnread"> <span>Only unread e-mails</span></label>
+      <label class="check"><input type="checkbox" id="scopeSkipReplied"> <span>Skip conversations I have already replied to</span></label>
+      <label class="field"><span>Extra Gmail search terms (optional)</span>
+        <input type="text" id="scopeExtra" placeholder="e.g. -from:noreply@ category:primary">
+        <span class="small muted">Uses the same syntax as the Gmail search box.</span></label>
+    </section>
+
+    <!-- 2. Rules -->
+    <section class="step card" data-step="rules" data-title="Rules">
+      <h2>2. Which e-mails should get a reply?</h2>
+      <p class="muted">Rules are checked from top to bottom; the first rule that matches decides what happens. Keywords match whole words, are not case-sensitive, and can be separated by commas or new lines. Advanced: write <code>/pattern/</code> for a regular expression.</p>
+      <div class="row">
+        <button id="addRule">+ Add rule</button>
+        <button id="loadTemplate">Load starter rules (job recruiter replies)</button>
+      </div>
+      <div id="rulesList" class="stack" style="margin-top:14px"></div>
+
+      <div class="card sub" style="margin-top:16px">
+        <h3>When no rule matches</h3>
+        <div class="row">
+          <label class="check"><input type="radio" name="unmatched" value="leave"> <span>Leave the e-mail exactly as it is</span></label>
+          <label class="check"><input type="radio" name="unmatched" value="label"> <span>Add label</span></label>
+          <input type="text" id="unmatchedLabel" placeholder="Label name" style="max-width:240px">
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Reply -->
+    <section class="step card" data-step="reply" data-title="Reply text">
+      <h2>3. What should the reply say?</h2>
+      <label class="field"><span>Subject</span>
+        <input type="text" id="replySubject"></label>
+      <div class="field-label" style="margin-top:12px">Message</div>
+      <div class="toolbar" id="toolbar" role="toolbar" aria-label="Formatting">
+        <select data-cmd="fontName" title="Font">
+          <option value="">Font</option>
+          <option value="Arial, sans-serif">Sans serif</option>
+          <option value="Georgia, serif">Serif</option>
+          <option value="Verdana, sans-serif">Wide</option>
+          <option value="'Courier New', monospace">Fixed width</option>
+        </select>
+        <select data-cmd="fontSize" title="Size">
+          <option value="">Size</option><option value="2">Small</option><option value="3">Normal</option><option value="5">Large</option><option value="6">Huge</option>
+        </select>
+        <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+        <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+        <label class="colorbtn" title="Text colour">A<input type="color" data-cmd="foreColor" value="#0b5394"></label>
+        <button type="button" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+        <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+        <button type="button" data-cmd="createLink" title="Link">Link</button>
+        <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+        <select id="placeholderSel" title="Insert placeholder"><option value="">Insert field…</option></select>
+        <button type="button" id="toggleHtml" title="Edit HTML">&lt;/&gt;</button>
+      </div>
+      <div id="editor" class="editor" contenteditable="true" spellcheck="true" aria-label="Reply message"></div>
+      <textarea id="htmlSource" class="editor-src hidden" spellcheck="false" aria-label="Reply HTML"></textarea>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="appendSig"> <span>Add my Gmail signature at the end</span></label>
+      <label class="check"><input type="checkbox" id="replyAll"> <span>Reply to all (copy the other people on the original e-mail)</span></label>
+    </section>
+
+    <!-- 4. Attachments -->
+    <section class="step card" data-step="attachments" data-title="Attachments">
+      <h2>4. Which files should be attached to every reply?</h2>
+      <p class="muted">Only these files are attached. Images and files from the original e-mail are never carried over. Up to 20 MB in total.</p>
+      <label class="drop" id="dropZone">
+        <input type="file" id="fileInput" multiple>
+        <span><b>Choose files</b> or drag them here</span>
+      </label>
+      <ul id="fileList" class="files"></ul>
+      <div id="fileTotal" class="small muted"></div>
+    </section>
+
+    <!-- 5. Handling -->
+    <section class="step card" data-step="handling" data-title="After sending & exceptions">
+      <h2>5. What should happen after a reply, and with exceptions?</h2>
+      <div class="card sub">
+        <h3>After a reply is sent</h3>
+        <label class="field"><span>Add label (leave empty for none)</span>
+          <input type="text" id="afterLabel" placeholder="e.g. Career  or  Jobs/Replied"></label>
+        <label class="check"><input type="checkbox" id="afterArchive"> <span>Remove it from the folder being checked (archive)</span></label>
+        <label class="check"><input type="checkbox" id="afterRead"> <span>Mark it as read</span></label>
+      </div>
+      <div class="card sub">
+        <h3>The same e-mail arrives more than once</h3>
+        <label class="check"><input type="radio" name="dupPolicy" value="newest"> <span>Reply only once (to the newest); for older copies:</span></label>
+        <div class="row indent">
+          <select id="dupAction"><option value="leave">leave them as they are</option><option value="label">add label</option></select>
+          <input type="text" id="dupLabel" placeholder="Label name" style="max-width:240px">
+        </div>
+        <label class="check"><input type="radio" name="dupPolicy" value="all"> <span>Reply to every copy</span></label>
+      </div>
+      <div class="card sub">
+        <h3>E-mails sent through job boards or relays</h3>
+        <label class="field"><span>Relay domains (one per line)</span>
+          <textarea id="relayDomains" rows="3"></textarea>
+          <span class="small muted">For these senders I look for the real person's e-mail address in the message and reply to that instead.</span></label>
+        <div class="row">
+          <span>If no address is found:</span>
+          <select id="relayNoAddr"><option value="leave">leave the e-mail for me to handle</option><option value="replyRelay">reply to the relay address anyway</option></select>
+        </div>
+      </div>
+      <div class="card sub">
+        <h3>Errors</h3>
+        <div class="grid2">
+          <label class="field"><span>Retry a failed e-mail this many times</span>
+            <input type="number" id="errRetries" min="1" max="10"></label>
+          <label class="field"><span>Then add label</span>
+            <input type="text" id="errLabel"></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Schedule -->
+    <section class="step card" data-step="schedule" data-title="Schedule">
+      <h2>6. When should it run, and how much at a time?</h2>
+      <label class="check"><input type="radio" name="schedMode" value="off"> <span>Only when I click <b>Run now</b></span></label>
+      <label class="check"><input type="radio" name="schedMode" value="interval"> <span>Every</span>
+        <select id="schedEvery">
+          <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">hour</option>
+          <option value="120">2 hours</option><option value="240">4 hours</option><option value="720">12 hours</option>
+        </select></label>
+      <label class="check"><input type="radio" name="schedMode" value="daily"> <span>Once a day at</span>
+        <input type="time" id="schedTime" style="width:130px">
+        <span class="row" style="gap:6px"><input type="checkbox" id="schedWeekdays"> weekdays only</span></label>
+      <div class="grid2" style="margin-top:12px">
+        <label class="field"><span>E-mails to check per run</span>
+          <input type="number" id="batchSize" min="1" max="500"></label>
+        <label class="field"><span>Maximum replies per 24 hours</span>
+          <input type="number" id="dailyCap" min="1" max="400">
+          <span class="small muted">Gmail limits personal accounts to about 500 sent e-mails a day.</span></label>
+      </div>
+      <label class="check"><input type="checkbox" id="notify"> <span>Show a notification after scheduled runs</span></label>
+      <p class="small muted">Scheduled runs happen while Chrome is open. You can always run on demand from the toolbar button. If Chrome closes or freezes during a run, it continues where it stopped the next time Chrome starts.</p>
+      <div class="card sub">
+        <h3>Activity report</h3>
+        <label class="check"><input type="checkbox" id="reportEmail"> <span>After each run, e-mail a spreadsheet (.xlsx) of everything that was done to the inbox that was processed</span></label>
+        <label class="check indent"><input type="checkbox" id="reportOnlyActivity"> <span>Skip the e-mail when nothing was replied to or labeled</span></label>
+        <label class="check indent"><input type="checkbox" id="reportPreviews"> <span>Also send a report for previews</span></label>
+        <p class="small muted">You can also download any run's report from the toolbar button.</p>
+      </div>
+    </section>
+
+    <!-- 7. Review -->
+    <section class="step card" data-step="review" data-title="Review & save">
+      <h2>7. Review and save</h2>
+      <div id="reviewBox" class="review"></div>
+      <div id="saveMsg" class="small"></div>
+      <div class="row" style="margin-top:14px">
+        <button id="saveBtn" class="primary">Save settings</button>
+        <button id="previewBtn">Save & preview (sends nothing)</button>
+        <button id="runBtn">Save & run now</button>
+      </div>
+      <details style="margin-top:20px">
+        <summary class="small">Advanced</summary>
+        <div class="row" style="margin-top:10px">
+          <button id="resetHistory" class="danger">Forget handled e-mails</button>
+          <span class="small muted">Lets e-mails that were already checked be checked again.</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="disconnectBtn" class="danger">Disconnect Google account</button>
+        </div>
+      </details>
+    </section>
+
+    <div class="pager">
+      <button id="prevBtn">Back</button>
+      <span id="stepCount" class="muted small"></span>
+      <button id="nextBtn" class="primary">Next</button>
+    </div>
+  </main>
+</div>
+
+<template id="ruleTpl">
+  <div class="card rule">
+    <div class="row">
+      <input type="checkbox" class="r-enabled" title="Rule on/off">
+      <input type="text" class="r-name grow" placeholder="Rule name" style="flex:1">
+      <button type="button" class="link r-up" title="Move up">▲</button>
+      <button type="button" class="link r-down" title="Move down">▼</button>
+      <button type="button" class="link danger r-del" title="Delete rule">Delete</button>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <label class="field"><span>If it contains any of these words</span>
+        <textarea class="r-include" rows="5" placeholder="Project Manager, Product Owner, Director"></textarea></label>
+      <label class="field"><span>…but none of these (optional)</span>
+        <textarea class="r-exclude" rows="5" placeholder="Intern, Unpaid"></textarea></label>
+    </div>
+    <div class="row small">
+      <span>Look in:</span>
+      <label class="row" style="gap:4px"><input type="checkbox" class="r-f-subject"> subject</label>
+      <label class="row" style="gap:4px"><input type="checkbox" class="r-f-body"> message text</label>
+      <label class="row" style="gap:4px"><input type="checkbox" class="r-f-sender"> sender</label>
+      <span style="margin-left:12px">Match:</span>
+      <select class="r-mode" style="width:auto"><option value="any">any word</option><option value="all">all words</option></select>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="field-label" style="margin:0">Then</span>
+      <select class="r-action" style="width:auto">
+        <option value="reply">send my reply</option>
+        <option value="label">add a label (no reply)</option>
+        <option value="leave">leave it for me to review</option>
+      </select>
+      <input type="text" class="r-label" placeholder="Label name" style="max-width:220px">
+      <label class="row small r-archive-wrap" style="gap:4px"><input type="checkbox" class="r-archive"> archive</label>
+      <label class="row small r-read-wrap" style="gap:4px"><input type="checkbox" class="r-read"> mark read</label>
+    </div>
+  </div>
+</template>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
