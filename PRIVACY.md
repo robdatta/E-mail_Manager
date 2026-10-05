@@ -2,7 +2,7 @@
 
 _Last updated: October 1, 2026_
 
-E-Mail Manager ("the extension") is published by Rob Datta (robdatta@gmail.com). This policy explains what data the extension uses and why.
+E-Mail Manager ("the extension") is published by Rob Datta (robdatta@gmail.com). Utility that scans inbox(es) and replies to messages with text, images, and attachments based on user-specified rules and schedule. This policy explains what data the extension uses and why.
 
 ## What the extension accesses
 

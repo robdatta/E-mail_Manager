@@ -3,13 +3,13 @@
 **Name:** E-Mail Manager
 
 **Summary (132 characters max):**
-Auto-reply to Gmail with your own message and attachments, based on your rules — then label, archive and get a spreadsheet report.
+Utility that scans inbox(es) and replies to messages with text, images, and attachments based on user-specified rules and schedule.
 
 **Category:** Productivity
 
 **Description:**
 
-E-Mail Manager answers the e-mails you get over and over, the way you would.
+Utility that scans inbox(es) and replies to messages with text, images, and attachments based on user-specified rules and schedule.
 
 Set it up once in a short guided wizard:
 
@@ -34,7 +34,7 @@ Made by Rob Datta. Source code: https://github.com/robdatta/E-mail_Manager
 ## Privacy practices tab
 
 **Single purpose:**
-Automatically reply to, label and organize the user's Gmail messages according to rules the user defines.
+Utility that scans inbox(es) and replies to messages with text, images, and attachments based on user-specified rules and schedule.
 
 **Permission justifications:**
 - `identity`: Signs the user in to the Google account whose inbox they choose, using Google OAuth.

@@ -1,6 +1,8 @@
 # E-Mail Manager
 
-A Chrome extension that answers Gmail messages for you using rules you set. You choose:
+Utility that scans inbox(es) and replies to messages with text, images, and attachments based on user-specified rules and schedule.
+
+E-Mail Manager is a Chrome extension. You choose:
 
 1. **Inbox.** Any Gmail or Google Workspace address. If you click the toolbar button while a Gmail inbox is open, it uses that inbox, and you can pick another one.
 2. **Rules.** Keyword rules decide which e-mails get a reply, which only get a label, and which are left for you to review.
