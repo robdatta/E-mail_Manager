@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .DS_Store
+
+# OAuth client secret downloads — never commit
+client_secret_*.json
