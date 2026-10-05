@@ -210,3 +210,25 @@ test('report e-mail goes to the processed inbox with a valid .xlsx', async () =>
   const bytes = reportBytes(run);
   assert.equal(String.fromCharCode(bytes[0], bytes[1]), 'PK');
 });
+
+test('images placed in the reply text are sent inline (multipart/related + Content-ID)', async () => {
+  const g = new FakeGmail([{ id: 't1', historyId: '1', messages: [msg({ id: 'm1', thread: 't1', from: 'Jane Roe <jane@acme.com>', subject: 'Program Manager' })] }]);
+  const c = config();
+  c.reply.html = '<p>Hello {{sender_first_name}}</p><img src="emgr-inline:abc123" alt="logo" width="200">';
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  let asked;
+  await runEngine({ config: c, gmail: g, state: freshState(), loadAttachments: files,
+    loadInlineImages: async (ids) => { asked = ids; return [{ id: 'abc123', name: 'logo.png', type: 'image/png', bytes: png }]; } });
+  assert.deepEqual(asked, ['abc123']);
+  const mime = g.sent[0].mime;
+  assert.match(mime, /multipart\/mixed/);
+  assert.match(mime, /multipart\/related/);
+  assert.match(mime, /^Content-ID: <abc123@email-manager>/m);
+  assert.match(mime, /^Content-Disposition: inline; filename="logo.png"/m);
+  const htmlB64 = mime.split('text/html; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n')[1].split('\r\n--')[0].replace(/\r\n/g, '');
+  const html = Buffer.from(htmlB64, 'base64').toString();
+  assert.ok(html.includes('src="cid:abc123@email-manager"'), html);
+  assert.ok(!html.includes('emgr-inline'));
+  // order: related part (with the image) comes before the Resume.pdf attachment
+  assert.ok(mime.indexOf('logo.png') < mime.indexOf('Resume.pdf'));
+});

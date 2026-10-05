@@ -1,4 +1,4 @@
-import { loadConfig, saveConfig, putFile, deleteFile } from './lib/store.js';
+import { loadConfig, saveConfig, putFile, deleteFile, getFile } from './lib/store.js';
 import { newRule, recruiterTemplate, PLACEHOLDERS, uid } from './lib/defaults.js';
 import { MAX_ATTACHMENT_BYTES, MAX_DAILY_CAP } from './lib/config.js';
 
@@ -8,6 +8,11 @@ const send = (msg) => chrome.runtime.sendMessage(msg);
 
 let cfg;
 const pendingDeletes = new Set();
+const inlineMeta = new Map();       // id -> {id, name, type, size} for images placed in the reply text
+const imageUrls = new Map();        // id -> object URL used to display it in the editor
+let selectedImg = null;
+let savedRange = null;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 let htmlMode = false;
 let connectedEmail = '';
 
@@ -62,7 +67,8 @@ function fillForm() {
   renderRules();
 
   $('#replySubject').value = cfg.reply.subjectTemplate;
-  $('#editor').innerHTML = sanitize(cfg.reply.html);
+  for (const m of cfg.inlineImages || []) inlineMeta.set(m.id, m);
+  renderEditor(cfg.reply.html);
   $('#appendSig').checked = cfg.reply.appendSignature;
   $('#replyAll').checked = cfg.reply.replyAll;
 
@@ -109,8 +115,8 @@ function collect() {
   cfg.handling.unmatched = { action: getRadio('unmatched') || 'leave', label: $('#unmatchedLabel').value.trim() };
 
   cfg.reply.subjectTemplate = $('#replySubject').value || 'Re: {{subject}}';
-  if (htmlMode) $('#editor').innerHTML = sanitize($('#htmlSource').value);
-  cfg.reply.html = sanitize($('#editor').innerHTML);
+  cfg.reply.html = toStored(htmlMode ? $('#htmlSource').value : $('#editor').innerHTML);
+  cfg.inlineImages = referencedImages(cfg.reply.html).map((id) => inlineMeta.get(id)).filter(Boolean);
   cfg.reply.text = editorText();
   cfg.reply.appendSignature = $('#appendSig').checked;
   cfg.reply.replyAll = $('#replyAll').checked;
@@ -240,7 +246,7 @@ function moveRule(i, d) {
 
 // ---------------------------------------------------------------- rich text editor
 const ALLOWED = new Set(['DIV', 'P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'SPAN', 'FONT', 'A', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TD', 'TH', 'IMG', 'HR', 'SUB', 'SUP']);
-const ATTRS = new Set(['style', 'href', 'color', 'face', 'size', 'target', 'src', 'alt', 'width', 'height', 'align', 'colspan', 'rowspan', 'title']);
+const ATTRS = new Set(['style', 'href', 'color', 'face', 'size', 'target', 'src', 'alt', 'width', 'height', 'align', 'colspan', 'rowspan', 'title', 'data-emgr']);
 
 function sanitize(html) {
   const doc = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html');
@@ -258,7 +264,7 @@ function sanitize(html) {
         const v = a.value.trim();
         if (!ATTRS.has(n)) { child.removeAttribute(a.name); continue; }
         if (n === 'href' && !/^(https?:|mailto:|tel:)/i.test(v)) child.removeAttribute(a.name);
-        if (n === 'src' && !/^https:/i.test(v)) child.removeAttribute(a.name);
+        if (n === 'src' && !/^(https:|blob:|emgr-inline:[\w-]+$)/i.test(v)) child.removeAttribute(a.name);
         if (n === 'style' && /(expression|javascript:|url\s*\()/i.test(v)) child.removeAttribute(a.name);
       }
       if (child.tagName === 'A') child.setAttribute('target', '_blank');
@@ -309,20 +315,142 @@ function setupEditor() {
   $('#toggleHtml').onclick = () => {
     htmlMode = !htmlMode;
     if (htmlMode) {
-      $('#htmlSource').value = sanitize(editor.innerHTML);
+      $('#htmlSource').value = toStored(editor.innerHTML);
     } else {
-      editor.innerHTML = sanitize($('#htmlSource').value);
+      renderEditor($('#htmlSource').value);
     }
+    $('#insertImageBtn').disabled = htmlMode;
     editor.classList.toggle('hidden', htmlMode);
     $('#htmlSource').classList.toggle('hidden', !htmlMode);
     $$('#toolbar [data-cmd]').forEach((b) => { b.disabled = htmlMode; });
   };
-  editor.addEventListener('paste', (e) => {            // paste as clean HTML
+  editor.addEventListener('paste', (e) => {            // paste images, or clean HTML
+    const imgs = [...(e.clipboardData.files || [])].filter((f) => f.type.startsWith('image/'));
+    if (imgs.length) { e.preventDefault(); insertImages(imgs); return; }
     const html = e.clipboardData.getData('text/html');
     if (!html) return;
     e.preventDefault();
     document.execCommand('insertHTML', false, sanitize(html));
   });
+}
+
+// ---------------------------------------------------------------- images in the reply text
+// Stored HTML refers to images as src="emgr-inline:<id>"; the files live in IndexedDB.
+// When a reply is sent they become inline parts referenced by Content-ID.
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+function referencedImages(html) {
+  return [...new Set([...String(html || '').matchAll(/emgr-inline:([\w-]+)/g)].map((m) => m[1]))];
+}
+
+/** Editor HTML → stored HTML (blob: previews become emgr-inline: references). */
+function toStored(html) {
+  const doc = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html');
+  for (const img of doc.querySelectorAll('img')) {
+    const id = img.getAttribute('data-emgr');
+    if (id) img.setAttribute('src', 'emgr-inline:' + id);
+    else if (/^blob:/i.test(img.getAttribute('src') || '')) { img.remove(); continue; }
+    img.removeAttribute('data-emgr');
+    img.removeAttribute('class');
+  }
+  return sanitize(doc.body.firstElementChild.innerHTML);
+}
+
+/** Stored HTML → editor, loading each image's preview from IndexedDB. */
+async function renderEditor(html) {
+  const editor = $('#editor');
+  editor.innerHTML = sanitize(html);
+  for (const img of editor.querySelectorAll('img[src^="emgr-inline:"]')) {
+    const id = img.getAttribute('src').slice('emgr-inline:'.length);
+    img.setAttribute('data-emgr', id);
+    let url = imageUrls.get(id);
+    if (!url) {
+      const rec = await getFile(id).catch(() => null);
+      if (!rec) { img.alt = '(missing image — insert it again)'; continue; }
+      url = URL.createObjectURL(rec.blob);
+      imageUrls.set(id, url);
+      if (!inlineMeta.has(id)) inlineMeta.set(id, { id, name: rec.name, type: rec.type, size: rec.size });
+    }
+    img.src = url;
+  }
+}
+
+function imageBytesInUse() {
+  const html = toStored($('#editor').innerHTML);
+  return referencedImages(html).reduce((a, id) => a + (inlineMeta.get(id)?.size || 0), 0);
+}
+
+function naturalWidth(url) {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(im.naturalWidth || 400);
+    im.onerror = () => resolve(400);
+    im.src = url;
+  });
+}
+
+async function insertImages(files) {
+  const problems = [];
+  const editor = $('#editor');
+  for (const file of files) {
+    if (!IMAGE_TYPES.includes(file.type)) { problems.push(`"${file.name}" is not a PNG, JPG, GIF or WebP image.`); continue; }
+    if (file.size > MAX_IMAGE_BYTES) { problems.push(`"${file.name}" is larger than 5 MB.`); continue; }
+    if (totalSize() + imageBytesInUse() + file.size > MAX_ATTACHMENT_BYTES) { problems.push(`"${file.name}" skipped — images and attachments together must stay under 20 MB.`); continue; }
+    const rec = { id: uid(), name: file.name || 'image.png', type: file.type, size: file.size };
+    await putFile({ ...rec, blob: file });
+    inlineMeta.set(rec.id, rec);
+    const url = URL.createObjectURL(file);
+    imageUrls.set(rec.id, url);
+    const w = Math.min(await naturalWidth(url), 600);
+    editor.focus();
+    const sel = window.getSelection();
+    if (savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); savedRange = null; }
+    else if (!sel.rangeCount || !editor.contains(sel.anchorNode)) {
+      const r = document.createRange(); r.selectNodeContents(editor); r.collapse(false); sel.removeAllRanges(); sel.addRange(r);
+    }
+    const alt = file.name.replace(/\.[^.]+$/, '').replace(/["<>&]/g, '');
+    document.execCommand('insertHTML', false, `<img src="${url}" data-emgr="${rec.id}" alt="${alt}" width="${w}">`);
+  }
+  if (problems.length) alert(problems.join('\n'));
+}
+
+function selectImage(img) {
+  if (selectedImg) selectedImg.classList.remove('sel');
+  selectedImg = img;
+  const sizeSel = $('#imageWidth');
+  if (img) { img.classList.add('sel'); sizeSel.classList.remove('hidden'); } else { sizeSel.classList.add('hidden'); }
+}
+
+function setupImages() {
+  const editor = $('#editor');
+  const input = $('#imageInput');
+  const btn = $('#insertImageBtn');
+  btn.onmousedown = (e) => {
+    e.preventDefault();
+    const sel = window.getSelection();
+    savedRange = sel.rangeCount && editor.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+  };
+  btn.onclick = () => input.click();
+  input.onchange = async () => { await insertImages([...input.files]); input.value = ''; };
+  editor.addEventListener('click', (e) => selectImage(e.target.tagName === 'IMG' ? e.target : null));
+  editor.addEventListener('dragover', (e) => { if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) e.preventDefault(); });
+  editor.addEventListener('drop', (e) => {
+    const imgs = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'));
+    if (!imgs.length) return;
+    e.preventDefault();
+    const pos = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    savedRange = pos && editor.contains(pos.startContainer) ? pos : null;
+    insertImages(imgs);
+  });
+  $('#imageWidth').onchange = (e) => {
+    const v = e.target.value;
+    if (selectedImg && v) {
+      if (v === 'orig') { selectedImg.removeAttribute('width'); selectedImg.style.width = ''; }
+      else if (v === 'full') { selectedImg.removeAttribute('width'); selectedImg.style.width = '100%'; }
+      else { selectedImg.setAttribute('width', v); selectedImg.style.width = ''; }
+    }
+    e.target.value = '';
+  };
 }
 
 function insertAtCursor(ta, text) {
@@ -334,7 +462,7 @@ function insertAtCursor(ta, text) {
 
 // ---------------------------------------------------------------- attachments
 const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
-const totalSize = () => cfg.attachments.reduce((a, f) => a + (f.size || 0), 0);
+const totalSize = () => cfg.attachments.reduce((a, f) => a + (f.size || 0), 0);  // attachment files only
 
 function renderFiles() {
   const ul = $('#fileList');
@@ -359,7 +487,7 @@ function renderFiles() {
 async function addFiles(fileList) {
   const msgs = [];
   for (const file of fileList) {
-    if (totalSize() + file.size > MAX_ATTACHMENT_BYTES) { msgs.push(`"${file.name}" skipped — the 20 MB total would be exceeded.`); continue; }
+    if (totalSize() + imageBytesInUse() + file.size > MAX_ATTACHMENT_BYTES) { msgs.push(`"${file.name}" skipped — attachments and images together must stay under 20 MB.`); continue; }
     if (cfg.attachments.some((a) => a.name === file.name && a.size === file.size)) continue;
     const rec = { id: uid(), name: file.name, type: file.type || 'application/octet-stream', size: file.size };
     await putFile({ ...rec, blob: file });
@@ -405,7 +533,7 @@ function renderReview() {
   const rows = [
     ['Inbox', `${escape(cfg.account.email || '—')} · ${escape(cfg.scope.labelName)}${cfg.scope.unreadOnly ? ' · unread only' : ''}${cfg.scope.after ? ' · since ' + escape(cfg.scope.after) : ''}`],
     ['Rules', cfg.rules.filter((r) => r.enabled).map((r, i) => `${i + 1}. ${escape(r.name)} → ${{ reply: 'reply', label: 'label "' + escape(r.label) + '"', leave: 'leave for review' }[r.action]}`).join('<br>') || '—'],
-    ['Reply', `<i>${escape(cfg.reply.subjectTemplate)}</i><br>${escape(cfg.reply.text.slice(0, 160))}${cfg.reply.text.length > 160 ? '…' : ''}${cfg.reply.appendSignature ? '<br>+ Gmail signature' : ''}`],
+    ['Reply', `<i>${escape(cfg.reply.subjectTemplate)}</i><br>${escape(cfg.reply.text.slice(0, 160))}${cfg.reply.text.length > 160 ? '…' : ''}${cfg.inlineImages?.length ? `<br>+ ${cfg.inlineImages.length} image(s) in the text` : ''}${cfg.reply.appendSignature ? '<br>+ Gmail signature' : ''}`],
     ['Attachments', cfg.attachments.map((a) => escape(a.name)).join(', ') || 'None'],
     ['After sending', [cfg.handling.afterSend.label && `label "${escape(cfg.handling.afterSend.label)}"`, cfg.handling.afterSend.archive && 'archive', cfg.handling.afterSend.markRead && 'mark read'].filter(Boolean).join(', ') || 'Nothing'],
     ['Schedule', `${sched} · ${s.batchSize} e-mails per run · max ${s.dailyCap} replies/day`],
@@ -426,6 +554,10 @@ let save = async function save() {
   await saveConfig(cfg);
   for (const id of pendingDeletes) await deleteFile(id);
   pendingDeletes.clear();
+  const used = new Set(referencedImages(cfg.reply.html));
+  for (const id of [...inlineMeta.keys()]) {
+    if (!used.has(id)) { await deleteFile(id); inlineMeta.delete(id); }
+  }
   await send({ type: 'configSaved' });
   $('#saveMsg').innerHTML = '<span class="pill ok">Saved</span> Click the E-Mail Manager button in the toolbar any time to run it or see results.';
   return true;
@@ -462,6 +594,7 @@ async function init() {
   }
   fillForm();
   setupEditor();
+  setupImages();
   setupFiles();
 
   $('#connectBtn').onclick = doConnect;

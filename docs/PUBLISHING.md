@@ -30,7 +30,7 @@ To keep the same ID while testing an unpacked copy: on the item's **Package** ta
 2. **APIs & Services → Library**: enable the **Gmail API**.
 3. **APIs & Services → OAuth consent screen** (Google Auth Platform):
    - User type: **External**.
-   - App name **E-Mail Manager**, support e-mail and developer contact **robdatta@gmail.com**, logo `docs/icon512.png` (resize it to 120×120).
+   - App name **E-Mail Manager**, support e-mail and developer contact **robdatta@gmail.com**, logo `docs/icon128.png` (resize it to 120×120).
    - App home page: `https://github.com/robdatta/E-mail_Manager`.
    - Privacy policy: a public URL for `PRIVACY.md`, e.g. `https://github.com/robdatta/E-mail_Manager/blob/main/PRIVACY.md`, or the GitHub Pages copy.
    - **Scopes**: add `https://www.googleapis.com/auth/gmail.modify`.

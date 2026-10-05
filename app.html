@@ -90,11 +90,17 @@
         <button type="button" data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
         <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
         <button type="button" data-cmd="createLink" title="Link">Link</button>
+        <button type="button" id="insertImageBtn" title="Insert an image into the message (PNG, JPG, GIF or WebP)">🖼 Image</button>
+        <input type="file" id="imageInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+        <select id="imageWidth" title="Width of the selected image" class="hidden">
+          <option value="">Image size…</option><option value="150">Small</option><option value="300">Medium</option><option value="500">Large</option><option value="full">Full width</option><option value="orig">Original</option>
+        </select>
         <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
         <select id="placeholderSel" title="Insert placeholder"><option value="">Insert field…</option></select>
         <button type="button" id="toggleHtml" title="Edit HTML">&lt;/&gt;</button>
       </div>
       <div id="editor" class="editor" contenteditable="true" spellcheck="true" aria-label="Reply message"></div>
+      <div class="small muted" id="imageHint">Tip: click <b>🖼 Image</b>, or paste or drag a picture into the message. Click a picture to change its size; press Delete to remove it.</div>
       <textarea id="htmlSource" class="editor-src hidden" spellcheck="false" aria-label="Reply HTML"></textarea>
       <label class="check" style="margin-top:10px"><input type="checkbox" id="appendSig"> <span>Add my Gmail signature at the end</span></label>
       <label class="check"><input type="checkbox" id="replyAll"> <span>Reply to all (copy the other people on the original e-mail)</span></label>

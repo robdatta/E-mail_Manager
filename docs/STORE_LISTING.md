@@ -15,7 +15,7 @@ Set it up once in a short guided wizard:
 
 • Inbox. Choose any Gmail or Google Workspace inbox. Click the toolbar button while Gmail is open and it uses that inbox, or pick another.
 • Rules. Decide which e-mails get your reply, which only get a label, and which wait for you, using simple keywords (regular expressions are also supported).
-• Reply. Write your message in a rich text editor. Add the sender's name, the original subject and your Gmail signature.
+• Reply. Write your message in a rich text editor. Add the sender's name, the original subject, your Gmail signature and images (a logo, a photo, a chart) right inside the message.
 • Attachments. Attach your résumé, price list or any other files to every reply.
 • After sending. Add a label, archive, mark as read. Choose how to handle duplicates and job-board senders, which get a reply sent to the real recruiter address.
 • Schedule. Run every few minutes or hours, once a day, or only when you click Run now. Choose how many e-mails each run checks and the most replies per day.

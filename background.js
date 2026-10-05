@@ -1,6 +1,6 @@
 // Service worker: scheduling, on-demand runs, crash-safe resume and reports.
 import {
-  loadConfig, saveConfig, getState, saveState, appendRun, getRuns, loadAttachmentBytes, resetState,
+  loadConfig, saveConfig, getState, saveState, appendRun, getRuns, loadAttachmentBytes, loadInlineImages, resetState,
   getActiveRun, setActiveRun,
 } from './lib/store.js';
 import { getToken, connect, disconnect } from './lib/auth.js';
@@ -141,6 +141,7 @@ async function doRun({ dryRun, trigger, resumeFrom }) {
       gmail, state, dryRun,
       resumeFrom: resumeFrom?.counts?.evaluated !== undefined ? resumeFrom : null,
       loadAttachments: () => loadAttachmentBytes(config.attachments),
+      loadInlineImages,
       getSignature: () => signatureFor(gmail, email),
       onProgress: (progress) => setStatus({ progress }),
       shouldStop: () => stopRequested,

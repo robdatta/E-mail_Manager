@@ -37,3 +37,7 @@
 .review dt { font-weight: 600; }
 .review dd { margin: 0; }
 .review .issues { margin-top: 12px; }
+
+.editor img { max-width: 100%; height: auto; cursor: pointer; }
+.editor img.sel { outline: 3px solid var(--brand); outline-offset: 2px; }
+#imageHint { margin-top: 6px; }

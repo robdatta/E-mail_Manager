@@ -6,7 +6,7 @@ E-Mail Manager is a Chrome extension. You choose:
 
 1. **Inbox.** Any Gmail or Google Workspace address. If you click the toolbar button while a Gmail inbox is open, it uses that inbox, and you can pick another one.
 2. **Rules.** Keyword rules decide which e-mails get a reply, which only get a label, and which are left for you to review.
-3. **Reply text.** Written in a rich text editor, with fields such as `{{sender_first_name}}` and your Gmail signature.
+3. **Reply text.** Written in a rich text editor, with fields such as `{{sender_first_name}}`, your Gmail signature, and images placed right in the message (**🖼 Image** button, paste, or drag and drop).
 4. **Attachments.** The files to add to every reply (up to 20 MB). Nothing from the original e-mail is carried over.
 5. **Handling.** What happens after a reply (label, archive, mark read), plus how to treat duplicates, job-board relay senders (Dice, ZipRecruiter, LinkedIn) and errors.
 6. **Schedule.** Run every N minutes or daily, set how many e-mails each run checks and the daily send limit, or use **Run now** and **Preview**.
